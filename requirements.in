@@ -1,0 +1,5 @@
+apache-libcloud
+cryptography
+dynaconf
+fastapi[all]
+requests
