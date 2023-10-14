@@ -1,0 +1,7 @@
+apache-libcloud
+cryptography
+dynaconf
+fastapi[all]
+pytest
+pytest-mock
+requests
