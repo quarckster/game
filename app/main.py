@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from fastapi import FastAPI
 from models import Action, WorkflowJobWebHook
 from clouds import provision_vm
@@ -5,6 +7,8 @@ from clouds import destroy_vm
 from config import settings
 
 import requests
+import uvicorn
+
 
 app = FastAPI()
 
@@ -34,3 +38,11 @@ async def actions(webhook: WorkflowJobWebHook):
         provision_vm(webhook.repository.html_url, token)
     if webhook.action == Action.completed:
         destroy_vm(webhook.workflow_job.runner_name)
+
+
+def start():
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+
+
+if __name__ == "__main__":
+    start()
