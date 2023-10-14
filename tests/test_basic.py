@@ -14,10 +14,16 @@ def payload():
     return json.load(open(tests_dir / "test_payload.json"))
 
 
-def test_post_actions(payload, mocker):
+@pytest.mark.parametrize("action", ["queued", "completed"])
+def test_post_actions(payload, mocker, action):
     mocker.patch("main.get_registration_token")
     mocker.patch("main.provision_vm")
+    mocker.patch("main.destroy_vm")
+    payload["action"] = action
     response = client.post("/actions/", json=payload)
     assert response.status_code == 200
-    main.get_registration_token.assert_called_once()
-    main.provision_vm.assert_called_once()
+    if action == "queued":
+        main.get_registration_token.assert_called_once()
+        main.provision_vm.assert_called_once()
+    if action == "completed":
+        main.destroy_vm.assert_called_once()
