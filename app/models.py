@@ -1,4 +1,5 @@
 from enum import Enum
+
 from pydantic import BaseModel
 
 
@@ -7,6 +8,7 @@ class StepConclusion(str, Enum):
     skipped = "skipped"
     success = "success"
     cancelled = "cancelled"
+
 
 class WorkflowJobConlusion(str, Enum):
     success = "success"

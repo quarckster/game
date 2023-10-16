@@ -1,8 +1,9 @@
 import random
 import string
-from libcloud.compute.types import Provider
-from libcloud.compute.providers import get_driver
+
 from config import settings
+from libcloud.compute.providers import get_driver
+from libcloud.compute.types import Provider
 
 instances = {}
 
@@ -19,10 +20,9 @@ def provision_vm(repo_url: str, token: str, labels: list[str]) -> None:
         vm_size,
         image,
         ex_metadata={"repo_url": repo_url, "token": token},
-        ex_service_accounts=[{
-            "email": settings.cloud.driver_params.user_id,
-            "scopes": ["compute"]
-        }]
+        ex_service_accounts=[
+            {"email": settings.cloud.driver_params.user_id, "scopes": ["compute"]}
+        ],
     )
     print(f"instance {instance.name} has been created")
     instances[instance.name] = instance
