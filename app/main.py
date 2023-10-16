@@ -32,7 +32,7 @@ def get_registration_token(webhook: WorkflowJobWebHook) -> str:
 
 
 @app.post("/actions")
-async def actions(webhook: WorkflowJobWebHook):
+def actions(webhook: WorkflowJobWebHook):
     if webhook.action == Action.queued:
         token = get_registration_token(webhook)
         provision_vm(webhook.repository.html_url, token)
@@ -41,7 +41,7 @@ async def actions(webhook: WorkflowJobWebHook):
 
 
 def start():
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="error")
 
 
 if __name__ == "__main__":
