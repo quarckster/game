@@ -10,7 +10,8 @@ RUN python3 -m venv /app_venv
 ENV PATH=/app_venv/bin:${PATH}
 
 RUN pip3 install -U pip wheel && \
-    pip3 install -r /requirements.txt
+    pip3 install -r /requirements.txt && \
+    pip3 install dumb-init
 
 FROM docker.io/library/debian:12-slim
 
@@ -31,5 +32,7 @@ EXPOSE 8080
 WORKDIR /app
 
 USER 1001
+
+ENTRYPOINT ["/app_venv/bin/dumb-init", "--"]
 
 CMD ["/app/main.py"]
