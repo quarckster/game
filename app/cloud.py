@@ -47,11 +47,11 @@ def provision_vm(repo_url: str, token: str, os: str) -> None:
     random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
     instance = cloud.driver.create_node(
         f"runner-{os}-{random_str}",
-        cloud.images[os]["image"],
-        cloud.images[os]["size"],
+        size=cloud.images[os]["size"],
+        image=cloud.images[os]["image"],
         ex_metadata={"repo_url": repo_url, "token": token},
         ex_service_accounts=[
-            {"email": settings.cloud.driver_params.user_id, "scopes": ["compute"]}
+            {"email": settings[cloud_name].driver_params.user_id, "scopes": ["compute"]}
         ],
     )
     logger.info(f"Instance {instance.name} has been created")
