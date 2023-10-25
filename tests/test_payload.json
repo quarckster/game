@@ -116,7 +116,13 @@
         "archived": false,
         "disabled": false,
         "open_issues_count": 0,
-        "license": null,
+        "license": {
+            "key": "apache-2.0",
+            "name": "Apache License 2.0",
+            "spdx_id": "Apache-2.0",
+            "url": "https://example.org/api/v3/licenses/apache-2.0",
+            "node_id": "test"
+        },
         "allow_forking": true,
         "is_template": false,
         "web_commit_signoff_required": false,
