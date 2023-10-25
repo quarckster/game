@@ -20,7 +20,7 @@
         "steps": [],
         "check_run_url": "https://example.org/api/v3/repos/some_user/some_repo/check-runs/147",
         "labels": [
-            "Linux"
+            "ubuntu-latest"
         ],
         "runner_id": null,
         "runner_name": null,

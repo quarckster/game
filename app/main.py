@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import requests
 import uvicorn
+from cloud import cloud
 from cloud import destroy_vm
 from cloud import provision_vm
 from config import settings
 from fastapi import FastAPI
+from logger import logger
 from models import Action
 from models import WorkflowJobWebHook
-
 
 app = FastAPI()
 
@@ -27,21 +28,34 @@ def get_registration_token(webhook: WorkflowJobWebHook) -> str:
     }
     resp = requests.post(url, headers=headers)
     data = resp.json()
-    return data["token"]
+    token = data["token"]
+    logger.info("Got registration token")
+    return token
+
+
+def get_image_os(webhook: WorkflowJobWebHook) -> str | None:
+    job_labels = set(webhook.workflow_job.labels)
+    for os, predefined_labels in settings.labels.items():
+        if job_labels.issubset(set(predefined_labels)):
+            return os
+    logger.info(f"No runner with labels {webhook.workflow_job.labels}")
+    return None
 
 
 @app.post("/actions")
 def actions(webhook: WorkflowJobWebHook):
-    if webhook.action == Action.queued:
+    if webhook.action == Action.queued and (image_os := get_image_os(webhook)):
+        logger.info("Queued")
         token = get_registration_token(webhook)
-        provision_vm(webhook.repository.html_url, token, webhook.workflow_job.labels)
+        provision_vm(webhook.repository.html_url, token, image_os)
     if webhook.action == Action.completed and webhook.workflow_job.runner_name:
+        logger.info("Completed")
         destroy_vm(webhook.workflow_job.runner_name)
 
 
 def start():
-    print("Waiting for workflow_job webhooks")
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="error")
+    cloud.init()
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
 
 
 if __name__ == "__main__":
