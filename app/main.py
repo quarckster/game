@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from contextlib import asynccontextmanager
+
 import requests
 import uvicorn
 from cloud import cloud
@@ -10,9 +12,17 @@ from logger import logger
 from models import Action
 from models import WorkflowJobWebHook
 
-app = FastAPI()
 
 API_URL = "https://{ghe_host}/api/v3/repos/{owner}/{repo}/actions/runners/registration-token"
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cloud.init()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 def get_registration_token(webhook: WorkflowJobWebHook) -> str:
@@ -54,7 +64,6 @@ def actions(webhook: WorkflowJobWebHook):
 
 
 def start():
-    cloud.init()
     uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
 
 
