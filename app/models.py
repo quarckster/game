@@ -4,206 +4,214 @@ from pydantic import BaseModel
 
 
 class StepConclusion(str, Enum):
+    cancelled = "cancelled"
     failure = "failure"
     skipped = "skipped"
     success = "success"
-    cancelled = "cancelled"
 
 
 class WorkflowJobConlusion(str, Enum):
-    success = "success"
-    failure = "failure"
-    skipped = "skipped"
-    cancelled = "cancelled"
     action_required = "action_required"
+    cancelled = "cancelled"
+    failure = "failure"
     neutral = "neutral"
+    skipped = "skipped"
+    success = "success"
     timed_out = "timed_out"
 
 
 class WorkflowStatus(str, Enum):
-    queued = "queued"
-    in_progress = "in_progress"
     completed = "completed"
+    in_progress = "in_progress"
+    queued = "queued"
     waiting = "waiting"
 
 
 class StepStatus(str, Enum):
-    in_progress = "in_progress"
     completed = "completed"
+    in_progress = "in_progress"
     queued = "queued"
 
 
 class Step(BaseModel):
-    name: str
-    status: StepStatus
+    completed_at: str | None
     conclusion: StepConclusion | None
+    name: str
     number: int
     started_at: str | None
-    completed_at: str | None
+    status: StepStatus
 
 
 class WorkflowJob(BaseModel):
     id: int
-    run_id: int
-    workflow_name: str | None
-    head_branch: str | None
-    run_url: str
-    run_attempt: int
-    node_id: str
-    head_sha: str
-    url: str
-    html_url: str
-    status: WorkflowStatus
+    check_run_url: str
+    completed_at: str | None
     conclusion: WorkflowJobConlusion | None
     created_at: str
-    started_at: str
-    completed_at: str | None
-    name: str
-    steps: list[Step]
-    check_run_url: str
+    head_branch: str | None
+    head_sha: str
+    html_url: str
     labels: list[str]
-    runner_id: int | None
-    runner_name: str | None
+    name: str
+    node_id: str
+    run_attempt: int
+    run_id: int
+    run_url: str
     runner_group_id: int | None
     runner_group_name: str | None
+    runner_id: int | None
+    runner_name: str | None
+    started_at: str
+    status: WorkflowStatus
+    steps: list[Step]
+    url: str
+    workflow_name: str | None
 
 
 class Owner(BaseModel):
-    login: str
     id: int
-    node_id: str
     avatar_url: str
-    gravatar_id: str
-    url: str
-    html_url: str
+    events_url: str
     followers_url: str
     following_url: str
     gists_url: str
+    gravatar_id: str
+    html_url: str
+    login: str
+    node_id: str
+    organizations_url: str
+    received_events_url: str
+    repos_url: str
+    site_admin: bool
     starred_url: str
     subscriptions_url: str
-    organizations_url: str
-    repos_url: str
-    events_url: str
-    received_events_url: str
     type: str
-    site_admin: bool
+    url: str
+
+
+class License(BaseModel):
+    key: str
+    name: str
+    node_id: str
+    spdx_id: str
+    url: str
 
 
 class Repository(BaseModel):
     id: int
-    node_id: str
-    name: str
-    full_name: str
-    private: bool
-    owner: Owner
-    html_url: str
-    description: str | None
-    fork: bool
-    url: str
-    forks_url: str
-    keys_url: str
-    collaborators_url: str
-    teams_url: str
-    hooks_url: str
-    issue_events_url: str
-    events_url: str
+    allow_forking: bool
+    anonymous_access_enabled: bool
+    archive_url: str
+    archived: bool
     assignees_url: str
-    branches_url: str
-    tags_url: str
     blobs_url: str
-    git_tags_url: str
-    git_refs_url: str
-    trees_url: str
-    statuses_url: str
-    languages_url: str
-    stargazers_url: str
+    branches_url: str
+    clone_url: str
+    collaborators_url: str
+    comments_url: str
+    commits_url: str
+    compare_url: str
+    contents_url: str
     contributors_url: str
+    created_at: str
+    default_branch: str
+    deployments_url: str
+    description: str | None
+    disabled: bool
+    downloads_url: str
+    events_url: str
+    fork: bool
+    forks_count: int
+    forks_url: str
+    forks: int
+    full_name: str
+    git_commits_url: str
+    git_refs_url: str
+    git_tags_url: str
+    git_url: str
+    has_discussions: bool
+    has_downloads: bool
+    has_issues: bool
+    has_pages: bool
+    has_projects: bool
+    has_wiki: bool
+    homepage: str | None
+    hooks_url: str
+    html_url: str
+    is_template: bool
+    issue_comment_url: str
+    issue_events_url: str
+    issues_url: str
+    keys_url: str
+    labels_url: str
+    language: str | None
+    languages_url: str
+    license: License | None
+    merges_url: str
+    milestones_url: str
+    mirror_url: str | None
+    name: str
+    node_id: str
+    notifications_url: str
+    open_issues_count: int
+    open_issues: int
+    owner: Owner
+    private: bool
+    pulls_url: str
+    pushed_at: str
+    releases_url: str
+    size: int
+    ssh_url: str
+    stargazers_count: int
+    stargazers_url: str
+    statuses_url: str
     subscribers_url: str
     subscription_url: str
-    commits_url: str
-    git_commits_url: str
-    comments_url: str
-    issue_comment_url: str
-    contents_url: str
-    compare_url: str
-    merges_url: str
-    archive_url: str
-    downloads_url: str
-    issues_url: str
-    pulls_url: str
-    milestones_url: str
-    notifications_url: str
-    labels_url: str
-    releases_url: str
-    deployments_url: str
-    created_at: str
-    updated_at: str
-    pushed_at: str
-    git_url: str
-    ssh_url: str
-    clone_url: str
     svn_url: str
-    homepage: str | None
-    size: int
-    stargazers_count: int
-    watchers_count: int
-    language: str | None
-    has_issues: bool
-    has_projects: bool
-    has_downloads: bool
-    has_wiki: bool
-    has_pages: bool
-    has_discussions: bool
-    forks_count: int
-    mirror_url: str | None
-    archived: bool
-    disabled: bool
-    open_issues_count: int
-    license: str | None
-    allow_forking: bool
-    is_template: bool
-    web_commit_signoff_required: bool
+    tags_url: str
+    teams_url: str
     topics: list
+    trees_url: str
+    updated_at: str
+    url: str
     visibility: str
-    forks: int
-    open_issues: int
+    watchers_count: int
     watchers: int
-    default_branch: str
-    anonymous_access_enabled: bool
+    web_commit_signoff_required: bool
 
 
 class Enterprise(BaseModel):
     id: int
-    slug: str
+    avatar_url: str
+    created_at: str
+    description: str | None
+    html_url: str
     name: str
     node_id: str
-    avatar_url: str
-    description: str | None
-    website_url: str | None
-    html_url: str
-    created_at: str
+    slug: str
     updated_at: str
+    website_url: str | None
 
 
 class Sender(BaseModel):
-    login: str
     id: int
-    node_id: str
     avatar_url: str
-    gravatar_id: str
-    url: str
-    html_url: str
+    events_url: str
     followers_url: str
     following_url: str
     gists_url: str
+    gravatar_id: str
+    html_url: str
+    login: str
+    node_id: str
+    organizations_url: str
+    received_events_url: str
+    repos_url: str
+    site_admin: bool
     starred_url: str
     subscriptions_url: str
-    organizations_url: str
-    repos_url: str
-    events_url: str
-    received_events_url: str
     type: str
-    site_admin: bool
+    url: str
 
 
 class Action(str, Enum):
@@ -215,7 +223,7 @@ class Action(str, Enum):
 
 class WorkflowJobWebHook(BaseModel):
     action: Action
-    workflow_job: WorkflowJob
-    repository: Repository
     enterprise: Enterprise
+    repository: Repository
     sender: Sender
+    workflow_job: WorkflowJob
