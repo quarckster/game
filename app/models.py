@@ -94,7 +94,7 @@ class License(BaseModel):
     name: str
     node_id: str
     spdx_id: str
-    url: str
+    url: str | None
 
 
 class Repository(BaseModel):

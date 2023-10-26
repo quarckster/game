@@ -18,30 +18,23 @@ def set_test_settings():
 @pytest.fixture(scope="module")
 def payload():
     tests_dir = Path(__file__).absolute().parent
-    return json.load(open(tests_dir / "test_payload.json"))
+    return json.load(open(tests_dir / "test_payload_new.json"))
 
 
 def test_post_actions_queued(payload, mocker):
     mocker.patch("main.cloud")
-    mocker.patch("main.get_registration_token")
-    mocker.patch("main.provision_vm")
-    mocker.patch("main.destroy_vm")
     response = client.post("/actions/", json=payload)
     assert response.status_code == 200
-    main.get_registration_token.assert_called_once()
-    main.provision_vm.assert_called_once()
-    main.destroy_vm.assert_not_called()
+    main.cloud.provision_vm.assert_called_once()
+    main.cloud.destroy_vm.assert_not_called()
 
 
 def test_post_actions_completed(payload, mocker):
     mocker.patch("main.cloud")
-    mocker.patch("main.get_registration_token")
-    mocker.patch("main.provision_vm")
-    mocker.patch("main.destroy_vm")
+    mocker.patch("cloud.get_registration_token")
     payload["action"] = "completed"
     payload["workflow_job"]["runner_name"] = "some-runner"
     response = client.post("/actions/", json=payload)
     assert response.status_code == 200
-    main.get_registration_token.assert_not_called()
-    main.provision_vm.assert_not_called()
-    main.destroy_vm.assert_called_once()
+    main.cloud.provision_vm.assert_not_called()
+    main.cloud.destroy_vm.assert_called_once()
