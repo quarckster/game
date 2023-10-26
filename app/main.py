@@ -8,6 +8,7 @@ from cloud import provision_vm
 from config import settings
 from fastapi import BackgroundTasks
 from fastapi import FastAPI
+from logger import log_config
 from logger import logger
 from models import Action
 from models import WorkflowJobWebHook
@@ -17,6 +18,7 @@ from models import WorkflowJobWebHook
 async def lifespan(app: FastAPI):
     cloud.init()
     yield
+    cloud.cleanup()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -27,22 +29,22 @@ def get_image_os(webhook: WorkflowJobWebHook) -> str | None:
     for os, predefined_labels in settings.labels.items():
         if job_labels.issubset(set(predefined_labels)):
             return os
-    logger.info(f"No runner with labels {webhook.workflow_job.labels}")
+    logger.info(f"{webhook.job_id}: No runner with labels {webhook.workflow_job.labels}.")
     return None
 
 
 @app.post("/actions")
 async def actions(webhook: WorkflowJobWebHook, background_tasks: BackgroundTasks):
     if webhook.action == Action.queued and (image_os := get_image_os(webhook)):
-        logger.info(f"{webhook.workflow_job.id}: Job queued")
+        logger.info(f'{webhook.job_id}: Job "{webhook.job_name}" queued.')
         background_tasks.add_task(provision_vm, webhook, image_os)
     if webhook.action == Action.completed and webhook.workflow_job.runner_name:
-        logger.info(f"{webhook.workflow_job.id}: Job completed")
+        logger.info(f'{webhook.job_id}: Job "{webhook.job_name}" completed.')
         background_tasks.add_task(destroy_vm, webhook)
 
 
 def start():
-    uvicorn.run(app, host=settings.host, port=settings.port, log_level="info")
+    uvicorn.run(app, host=settings.host, port=settings.port, log_config=log_config)
 
 
 if __name__ == "__main__":

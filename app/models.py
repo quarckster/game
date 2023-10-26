@@ -227,3 +227,15 @@ class WorkflowJobWebHook(BaseModel):
     repository: Repository
     sender: Sender
     workflow_job: WorkflowJob
+
+    @property
+    def job_id(self) -> int:
+        return self.workflow_job.id
+
+    @property
+    def job_name(self) -> str:
+        return self.workflow_job.name
+
+    @property
+    def runner_name(self) -> str:
+        return self.workflow_job.runner_name or ""

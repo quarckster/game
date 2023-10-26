@@ -21,9 +21,9 @@ log_config = {
         },
     },
     "loggers": {
-        "game-logger": {"handlers": ["default"], "level": settings.log_level},
+        "root": {"handlers": ["default"], "level": settings.log_level},
     },
 }
 
 dictConfig(log_config)
-logger = logging.getLogger("game-logger")
+logger = logging.getLogger("root")
