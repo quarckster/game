@@ -41,10 +41,8 @@ class Cloud:
         self.instances: dict[str, Node] = {}
 
     def init(self):
-        if not self.driver:
-            self.driver = self._get_driver()
-        if not self.images:
-            self.images = self._get_images()
+        self.driver = self.driver or self._get_driver()
+        self.images = self.images or self._get_images()
 
     def cleanup(self):
         logger.info(f"Shutting down running VMs: {len(self.instances)}.")
@@ -74,6 +72,7 @@ class Cloud:
             f"runner-{os}-{random_str}",
             size=self.images[os]["size"],
             image=self.images[os]["image"],
+            external_ip=None,
             ex_metadata={"repo_url": webhook.repository.html_url, "token": token},
             ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
         )
