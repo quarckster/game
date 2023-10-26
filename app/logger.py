@@ -1,6 +1,8 @@
 import logging
 from logging.config import dictConfig
 
+from config import settings
+
 log_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -19,7 +21,7 @@ log_config = {
         },
     },
     "loggers": {
-        "game-logger": {"handlers": ["default"], "level": "INFO"},
+        "game-logger": {"handlers": ["default"], "level": settings.log_level},
     },
 }
 
