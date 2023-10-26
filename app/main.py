@@ -3,8 +3,6 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from cloud import cloud
-from cloud import destroy_vm
-from cloud import provision_vm
 from config import settings
 from fastapi import BackgroundTasks
 from fastapi import FastAPI
@@ -37,10 +35,10 @@ def get_image_os(webhook: WorkflowJobWebHook) -> str | None:
 async def actions(webhook: WorkflowJobWebHook, background_tasks: BackgroundTasks):
     if webhook.action == Action.queued and (image_os := get_image_os(webhook)):
         logger.info(f'{webhook.job_id}: Job "{webhook.job_name}" queued.')
-        background_tasks.add_task(provision_vm, webhook, image_os)
+        background_tasks.add_task(cloud.provision_vm, webhook, image_os)
     if webhook.action == Action.completed and webhook.workflow_job.runner_name:
         logger.info(f'{webhook.job_id}: Job "{webhook.job_name}" completed.')
-        background_tasks.add_task(destroy_vm, webhook)
+        background_tasks.add_task(cloud.destroy_vm, webhook)
 
 
 def start():
