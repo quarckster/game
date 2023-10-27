@@ -8,6 +8,7 @@ from libcloud.compute.base import NodeDriver
 from libcloud.compute.providers import get_driver
 from libcloud.compute.types import Provider
 from logger import logger
+from models import VmTemplate
 from models import WorkflowJobWebHook
 
 
@@ -34,15 +35,15 @@ def get_registration_token(webhook: WorkflowJobWebHook) -> str:
 
 class Cloud:
     def __init__(self) -> None:
-        self.name = settings.cloud
-        self.service_account = settings[self.name].driver_params.user_id
+        self.name = settings.env_for_dynaconf
+        self.service_account = settings.driver_params.user_id
         self.driver: NodeDriver = None
-        self.images: dict[str, dict[str, str]] = None
+        self.vm_templates: dict[str, VmTemplate] = None
         self.instances: dict[str, Node] = {}
 
     def init(self):
         self.driver = self.driver or self._get_driver()
-        self.images = self.images or self._get_images()
+        self.vm_templates = self.vm_templates or self._get_vm_templates()
 
     def cleanup(self):
         logger.info(f"Shutting down running VMs: {len(self.instances)}.")
@@ -51,29 +52,40 @@ class Cloud:
             logger.info(f"Instance {instance.name} has been destroyed.")
 
     def _get_driver(self) -> NodeDriver:
-        driver_params = settings[self.name].driver_params
-        Driver = get_driver(getattr(Provider, settings.cloud.upper()))
+        driver_params = settings.driver_params
+        Driver = get_driver(getattr(Provider, self.name.upper()))
         driver = Driver(**driver_params)
         logger.info(f"{self.name.upper()} driver has been initialized.")
         return driver
 
-    def _get_images(self) -> dict[str, dict[str, str]]:
-        images = {}
-        for os, template in settings[self.name].vm_templates.items():
-            image = self.driver.ex_get_image(template.image)
-            logger.info(f"Found image {image.name}")
-            images[os] = {"image": image, "size": template.size}
-        return images
+    def get_vm_template(self, webhook: WorkflowJobWebHook) -> VmTemplate | None:
+        job_labels = set(webhook.workflow_job.labels)
+        for _, template in self.vm_templates.items():
+            if job_labels.issubset(set(template.labels)):
+                return template
+        logger.info(f"{webhook.job_id}: No runner with labels {webhook.workflow_job.labels}.")
+        return None
 
-    def provision_vm(self, webhook: WorkflowJobWebHook, os: str) -> None:
+    def _get_vm_templates(self) -> dict[str, VmTemplate]:
+        vm_templates = {}
+        for os, template in settings.vm_templates.items():
+            image = self.driver.ex_get_image(template.image)
+            logger.info(f"Found image {image.name}.")
+            vm_templates[os] = VmTemplate(image=image, size=template.size, labels=template.labels)
+        return vm_templates
+
+    def provision_vm(self, webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> None:
         token = get_registration_token(webhook)
         random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
         instance = self.driver.create_node(
-            f"runner-{os}-{random_str}",
-            size=self.images[os]["size"],
-            image=self.images[os]["image"],
-            external_ip=None,
-            ex_metadata={"repo_url": webhook.repository.html_url, "token": token},
+            f"runner-{webhook.run_id}-{webhook.job_id}-{random_str}",
+            size=vm_template.size,
+            image=vm_template.image,
+            ex_metadata={
+                "repo_url": webhook.repository.html_url,
+                "token": token,
+                "labels": ",".join(vm_template.labels),
+            },
             ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
         )
         logger.info(f"{webhook.job_id}: Instance {instance.name} has been created.")
