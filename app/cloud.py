@@ -10,6 +10,10 @@ from libcloud.compute.types import Provider
 from logger import logger
 from models import VmTemplate
 from models import WorkflowJobWebHook
+from tenacity import retry
+from tenacity import stop_after_delay
+from tenacity import wait_fixed
+from tenacity import wait_random
 
 
 API_URL = "https://{ghe_host}/api/v3/repos/{owner}/{repo}/actions/runners/registration-token"
@@ -74,20 +78,25 @@ class Cloud:
             vm_templates[os] = VmTemplate(image=image, size=template.size, labels=template.labels)
         return vm_templates
 
+    @retry(stop=stop_after_delay(30 * 60), wait=wait_fixed(30) + wait_random(0, 5))
     def provision_vm(self, webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> None:
         token = get_registration_token(webhook)
         random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
-        instance = self.driver.create_node(
-            f"runner-{webhook.run_id}-{webhook.job_id}-{random_str}",
-            size=vm_template.size,
-            image=vm_template.image,
-            ex_metadata={
-                "repo_url": webhook.repository.html_url,
-                "token": token,
-                "labels": ",".join(vm_template.labels),
-            },
-            ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
-        )
+        try:
+            instance = self.driver.create_node(
+                f"runner-{webhook.run_id}-{webhook.job_id}-{random_str}",
+                size=vm_template.size,
+                image=vm_template.image,
+                ex_metadata={
+                    "repo_url": webhook.repository.html_url,
+                    "token": token,
+                    "labels": ",".join(vm_template.labels),
+                },
+                ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
+            )
+        except Exception as e:
+            logger.error(f"{webhook.job_id}: Unable to provision an instaince: {str(e)}. Retrying.")
+            raise
         logger.info(f"{webhook.job_id}: Instance {instance.name} has been created.")
         self.instances[instance.name] = instance
 

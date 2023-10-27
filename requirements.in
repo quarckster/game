@@ -3,3 +3,4 @@ cryptography
 dynaconf
 fastapi[all]
 requests
+tenacity
