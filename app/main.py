@@ -25,10 +25,10 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/actions")
 async def actions(webhook: WorkflowJobWebHook, background_tasks: BackgroundTasks):
     if webhook.action == Action.queued and (vm_template := cloud.get_vm_template(webhook)):
-        logger.info(f'{webhook.job_id}: Job "{webhook.job_name}" queued.')
+        logger.info(f'Job "{webhook.job_name}" queued.')
         background_tasks.add_task(cloud.provision_vm, webhook, vm_template)
     if webhook.action == Action.completed and webhook.workflow_job.runner_name:
-        logger.info(f'{webhook.job_id}: Job "{webhook.job_name}" completed.')
+        logger.info(f'Job "{webhook.job_name}" completed.')
         background_tasks.add_task(cloud.destroy_vm, webhook)
 
 

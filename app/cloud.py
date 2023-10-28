@@ -33,8 +33,17 @@ def get_registration_token(webhook: WorkflowJobWebHook) -> str:
     resp = requests.post(url, headers=headers)
     data = resp.json()
     token = data["token"]
-    logger.info(f"{webhook.job_id}: Got registration token for {webhook.repository.html_url}.")
+    logger.info(f"Got registration token for {webhook.repository.html_url}.")
     return token
+
+
+class ConcurrencyException(Exception):
+    def __init__(self, msg: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.msg = msg
+
+    def __str__(self) -> str:
+        return self.msg
 
 
 class Cloud:
@@ -45,11 +54,11 @@ class Cloud:
         self.vm_templates: dict[str, VmTemplate] = None
         self.instances: dict[str, Node] = {}
 
-    def init(self):
+    def init(self) -> None:
         self.driver = self.driver or self._get_driver()
         self.vm_templates = self.vm_templates or self._get_vm_templates()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         logger.info(f"Shutting down running VMs: {len(self.instances)}.")
         for instance in self.instances.values():
             instance.destroy()
@@ -67,7 +76,7 @@ class Cloud:
         for _, template in self.vm_templates.items():
             if job_labels.issubset(set(template.labels)):
                 return template
-        logger.info(f"{webhook.job_id}: No runner with labels {webhook.workflow_job.labels}.")
+        logger.info(f"No runner with labels {webhook.workflow_job.labels}.")
         return None
 
     def _get_vm_templates(self) -> dict[str, VmTemplate]:
@@ -78,7 +87,7 @@ class Cloud:
             vm_templates[os] = VmTemplate(image=image, size=template.size, labels=template.labels)
         return vm_templates
 
-    @retry(stop=stop_after_delay(30 * 60), wait=wait_fixed(30) + wait_random(0, 5))
+    @retry(stop=stop_after_delay(45 * 60), wait=wait_fixed(30) + wait_random(0, 5))
     def provision_vm(self, webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> None:
         token = get_registration_token(webhook)
         random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
@@ -95,16 +104,16 @@ class Cloud:
                 ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
             )
         except Exception as e:
-            logger.error(f"{webhook.job_id}: Unable to provision an instaince: {str(e)}. Retrying.")
+            logger.error(f"Unable to provision an instance: {str(e)}. Retrying.")
             raise
-        logger.info(f"{webhook.job_id}: Instance {instance.name} has been created.")
+        logger.info(f"Instance {instance.name} has been created.")
         self.instances[instance.name] = instance
 
     def destroy_vm(self, webhook: WorkflowJobWebHook) -> None:
         instance = self.instances[webhook.runner_name]
         if instance.destroy():
             del self.instances[webhook.runner_name]
-            logger.info(f"{webhook.job_id}: Instance {webhook.runner_name} has been destroyed.")
+            logger.info(f"Instance {webhook.runner_name} has been destroyed.")
 
 
 cloud = Cloud()
