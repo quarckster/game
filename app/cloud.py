@@ -39,15 +39,6 @@ def get_registration_token(webhook: WorkflowJobWebHook) -> str:
     return token
 
 
-class ConcurrencyException(Exception):
-    def __init__(self, msg: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.msg = msg
-
-    def __str__(self) -> str:
-        return self.msg
-
-
 class Cloud:
     vm_templates: dict[str, VmTemplate]
     driver: NodeDriver
