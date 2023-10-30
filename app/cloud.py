@@ -74,13 +74,13 @@ class Cloud:
         logger.info(f"No runner with labels {webhook.workflow_job.labels}.")
         return None
 
-    def provision_vm(self, webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> None:
+    def provision_vm(self, webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> str:
         token = get_registration_token(webhook)
         random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
         driver = self.get_driver()
         image = driver.ex_get_image(vm_template.image)
         instance = driver.create_node(
-            f"runner-{webhook.run_id}-{random_str}",
+            f"runner-repo{webhook.repository.id}-{random_str}",
             size=vm_template.size,
             image=image,
             ex_metadata={
@@ -92,6 +92,7 @@ class Cloud:
         )
         logger.info(f"Instance {instance.name} has been created.")
         self.instances[instance.name] = instance
+        return instance.name
 
     def destroy_vm(self, webhook: WorkflowJobWebHook) -> None:
         instance = self.instances[webhook.runner_name]

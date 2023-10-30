@@ -9,12 +9,13 @@ events = {}
 
 
 def queue(webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> None:
-    event = events[webhook.job_url] = threading.Event()
-    cloud.provision_vm(webhook, vm_template)
+    runner_name = cloud.provision_vm(webhook, vm_template)
+    event = events[runner_name] = threading.Event()
     event.wait()
+    del events[runner_name]
 
 
 def complete(webhook: WorkflowJobWebHook) -> None:
     cloud.destroy_vm(webhook)
-    event = events[webhook.job_url]
+    event = events[webhook.runner_name]
     event.set()
