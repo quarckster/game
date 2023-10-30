@@ -230,8 +230,8 @@ class WorkflowJobWebHook(BaseModel):
     workflow_job: WorkflowJob
 
     @property
-    def job_id(self) -> int:
-        return self.workflow_job.id
+    def job_url(self) -> str:
+        return self.workflow_job.url
 
     @property
     def run_id(self) -> int:
@@ -240,6 +240,10 @@ class WorkflowJobWebHook(BaseModel):
     @property
     def job_name(self) -> str:
         return self.workflow_job.name
+
+    @property
+    def workflow_name(self) -> str:
+        return self.workflow_job.workflow_name or ""
 
     @property
     def runner_name(self) -> str:
