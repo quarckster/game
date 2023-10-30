@@ -1,6 +1,5 @@
 from enum import Enum
 
-from libcloud.compute.base import NodeImage
 from pydantic import BaseModel
 
 
@@ -250,7 +249,7 @@ class WorkflowJobWebHook(BaseModel):
         return self.workflow_job.runner_name or ""
 
 
-class VmTemplate(BaseModel, arbitrary_types_allowed=True):  # type: ignore
-    image: NodeImage
+class VmTemplate(BaseModel):
+    image: str
     size: str
     labels: list[str]

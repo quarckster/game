@@ -12,10 +12,6 @@ from libcloud.compute.types import Provider
 from logger import logger
 from models import VmTemplate
 from models import WorkflowJobWebHook
-from tenacity import retry
-from tenacity import stop_after_delay
-from tenacity import wait_fixed
-from tenacity import wait_random
 
 
 API_URL = "https://{ghe_host}/api/v3/repos/{owner}/{repo}/actions/runners/registration-token"
@@ -40,17 +36,15 @@ def get_registration_token(webhook: WorkflowJobWebHook) -> str:
 
 
 class Cloud:
-    vm_templates: dict[str, VmTemplate]
-    driver: NodeDriver
-
     def __init__(self) -> None:
         self.name = settings.env_for_dynaconf
         self.service_account = settings.driver_params.user_id
         self.instances: dict[str, Node] = {}
-
-    def init(self) -> None:
-        self.driver = self.driver or self._get_driver()
-        self.vm_templates = self.vm_templates or self._get_vm_templates()
+        self.vm_templates: list[VmTemplate] = []
+        for _, template in settings.vm_templates.items():
+            self.vm_templates.append(
+                VmTemplate(image=template.image, size=template.size, labels=template.labels)
+            )
 
     def cleanup(self) -> None:
         logger.info(f"Shutting down running VMs: {len(self.instances)}.")
@@ -62,55 +56,40 @@ class Cloud:
                 name = futures[future]
                 logger.info(f"Instance {name} has been destroyed.")
 
-    def _get_driver(self) -> NodeDriver:
+    def get_driver(self) -> NodeDriver:
+        """
+        Libcloud driver instance is not thread safe. The documentation recommends to create a new
+        driver instance inside each thread.
+        https://libcloud.readthedocs.io/en/stable/other/using-libcloud-in-multithreaded-and-async-environments.html
+        """
         driver_params = settings.driver_params
         Driver = get_driver(getattr(Provider, self.name.upper()))
-        driver = Driver(**driver_params)
-        logger.info(f"{self.name.upper()} driver has been initialized.")
-        return driver
+        return Driver(**driver_params)
 
     def get_vm_template(self, webhook: WorkflowJobWebHook) -> VmTemplate | None:
         job_labels = set(webhook.workflow_job.labels)
-        for _, template in self.vm_templates.items():
+        for template in self.vm_templates:
             if job_labels.issubset(set(template.labels)):
                 return template
         logger.info(f"No runner with labels {webhook.workflow_job.labels}.")
         return None
 
-    def _get_vm_templates(self) -> dict[str, VmTemplate]:
-        vm_templates = {}
-        with ThreadPoolExecutor() as executor:
-            futures = {}
-            for os, template in settings.vm_templates.items():
-                futures[executor.submit(self.driver.ex_get_image, template.image)] = (os, template)
-            for future in as_completed(futures):
-                os, template = futures[future]
-                image = future.result()
-                logger.info(f"Found image {image.name}.")
-                vm_templates[os] = VmTemplate(
-                    image=image, size=template.size, labels=template.labels
-                )
-        return vm_templates
-
-    @retry(stop=stop_after_delay(45 * 60), wait=wait_fixed(30) + wait_random(0, 5))
     def provision_vm(self, webhook: WorkflowJobWebHook, vm_template: VmTemplate) -> None:
         token = get_registration_token(webhook)
         random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
-        try:
-            instance = self.driver.create_node(
-                f"runner-{webhook.run_id}-{random_str}",
-                size=vm_template.size,
-                image=vm_template.image,
-                ex_metadata={
-                    "repo_url": webhook.repository.html_url,
-                    "token": token,
-                    "labels": ",".join(vm_template.labels),
-                },
-                ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
-            )
-        except Exception as e:
-            logger.error(f"Unable to provision an instance: {str(e)}. Retrying.")
-            raise
+        driver = self.get_driver()
+        image = driver.ex_get_image(vm_template.image)
+        instance = driver.create_node(
+            f"runner-{webhook.run_id}-{random_str}",
+            size=vm_template.size,
+            image=image,
+            ex_metadata={
+                "repo_url": webhook.repository.html_url,
+                "token": token,
+                "labels": ",".join(vm_template.labels),
+            },
+            ex_service_accounts=[{"email": self.service_account, "scopes": ["compute"]}],
+        )
         logger.info(f"Instance {instance.name} has been created.")
         self.instances[instance.name] = instance
 

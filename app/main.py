@@ -15,7 +15,6 @@ from models import WorkflowJobWebHook
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    cloud.init()
     yield
     cloud.cleanup()
     queue_executor.shutdown(cancel_futures=True)
