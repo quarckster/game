@@ -1,5 +1,6 @@
-from cloud import cloud
 import threading
+
+from cloud import cloud
 from models import VmTemplate
 from models import WorkflowJobWebHook
 
