@@ -1,18 +1,13 @@
 import json
 from pathlib import Path
 
+import job
 import main
 import pytest
-from config import settings
 from fastapi.testclient import TestClient
 
 
 client = TestClient(main.app)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def set_test_settings():
-    settings.configure(FORCE_ENV_FOR_DYNACONF="testing")
 
 
 @pytest.fixture(scope="module")
@@ -23,18 +18,20 @@ def payload():
 
 def test_post_actions_queued(payload, mocker):
     mocker.patch("main.cloud")
+    mocker.patch("job.cloud")
     response = client.post("/actions/", json=payload)
     assert response.status_code == 200
-    main.cloud.provision_vm.assert_called_once()
+    job.cloud.provision_vm.assert_called_once()
     main.cloud.destroy_vm.assert_not_called()
 
 
 def test_post_actions_completed(payload, mocker):
     mocker.patch("main.cloud")
+    mocker.patch("job.cloud")
     mocker.patch("cloud.get_registration_token")
     payload["action"] = "completed"
     payload["workflow_job"]["runner_name"] = "some-runner"
     response = client.post("/actions/", json=payload)
     assert response.status_code == 200
-    main.cloud.provision_vm.assert_not_called()
-    main.cloud.destroy_vm.assert_called_once()
+    job.cloud.provision_vm.assert_not_called()
+    job.cloud.destroy_vm.assert_called_once()
