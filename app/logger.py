@@ -22,6 +22,7 @@ log_config = {
     },
     "loggers": {
         "root": {"handlers": ["default"], "level": settings.log_level},
+        "uvicorn.access": {"handlers": [], "propagate": False},
     },
 }
 
