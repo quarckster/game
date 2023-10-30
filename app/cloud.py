@@ -1,5 +1,7 @@
 import random
 import string
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from config import settings
@@ -47,11 +49,12 @@ class ConcurrencyException(Exception):
 
 
 class Cloud:
+    vm_templates: dict[str, VmTemplate]
+    driver: NodeDriver
+
     def __init__(self) -> None:
         self.name = settings.env_for_dynaconf
         self.service_account = settings.driver_params.user_id
-        self.driver: NodeDriver = None
-        self.vm_templates: dict[str, VmTemplate] = None
         self.instances: dict[str, Node] = {}
 
     def init(self) -> None:
@@ -60,9 +63,13 @@ class Cloud:
 
     def cleanup(self) -> None:
         logger.info(f"Shutting down running VMs: {len(self.instances)}.")
-        for instance in self.instances.values():
-            instance.destroy()
-            logger.info(f"Instance {instance.name} has been destroyed.")
+        with ThreadPoolExecutor() as executor:
+            futures = {}
+            for instance in self.instances.values():
+                futures[executor.submit(instance.destroy)] = instance.name
+            for future in as_completed(futures):
+                name = futures[future]
+                logger.info(f"Instance {name} has been destroyed.")
 
     def _get_driver(self) -> NodeDriver:
         driver_params = settings.driver_params
@@ -81,10 +88,17 @@ class Cloud:
 
     def _get_vm_templates(self) -> dict[str, VmTemplate]:
         vm_templates = {}
-        for os, template in settings.vm_templates.items():
-            image = self.driver.ex_get_image(template.image)
-            logger.info(f"Found image {image.name}.")
-            vm_templates[os] = VmTemplate(image=image, size=template.size, labels=template.labels)
+        with ThreadPoolExecutor() as executor:
+            futures = {}
+            for os, template in settings.vm_templates.items():
+                futures[executor.submit(self.driver.ex_get_image, template.image)] = (os, template)
+            for future in as_completed(futures):
+                os, template = futures[future]
+                image = future.result()
+                logger.info(f"Found image {image.name}.")
+                vm_templates[os] = VmTemplate(
+                    image=image, size=template.size, labels=template.labels
+                )
         return vm_templates
 
     @retry(stop=stop_after_delay(45 * 60), wait=wait_fixed(30) + wait_random(0, 5))
@@ -93,7 +107,7 @@ class Cloud:
         random_str = "".join(random.choices(string.ascii_lowercase + string.digits, k=6))
         try:
             instance = self.driver.create_node(
-                f"runner-{webhook.run_id}-{webhook.job_id}-{random_str}",
+                f"runner-{webhook.run_id}-{random_str}",
                 size=vm_template.size,
                 image=vm_template.image,
                 ex_metadata={
